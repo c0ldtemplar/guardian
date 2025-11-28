@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
-import { trackRequest } from '@/lib/metrics'
+// import { trackRequest } from '@/lib/metrics'
 
 export function middleware(request: NextRequest) {
     const startTime = Date.now()
@@ -13,7 +13,7 @@ export function middleware(request: NextRequest) {
         // Track asynchronously
         queueMicrotask(() => {
             try {
-                trackRequest(request.method, path, response.status, duration)
+                // trackRequest(request.method, path, response.status, duration)
             } catch (e) {
                 console.error('Metrics error:', e)
             }
@@ -26,3 +26,4 @@ export function middleware(request: NextRequest) {
 export const config = {
     matcher: '/:path*',
 }
+
