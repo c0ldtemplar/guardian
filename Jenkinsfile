@@ -3,7 +3,7 @@ pipeline {
 
     environment {
         // Define environment variables here
-        NODE_ENV = 'production'
+        // NODE_ENV = 'production' // Removed to allow installing devDependencies
     }
 
     stages {
