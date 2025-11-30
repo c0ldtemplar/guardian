@@ -21,12 +21,17 @@ pipeline {
 
         stage('Test') {
             steps {
-                // Run tests if they exist
                 script {
-                    try {
-                        sh 'npm test'
-                    } catch (Exception e) {
-                        echo 'No tests found or tests failed'
+                    def packageJson = readJSON file: 'package.json'
+                    if (packageJson.scripts && packageJson.scripts.test) {
+                        try {
+                            sh 'npm test'
+                        } catch (Exception e) {
+                            echo 'Tests failed'
+                            currentBuild.result = 'UNSTABLE'
+                        }
+                    } else {
+                        echo 'No test script found in package.json'
                     }
                 }
             }
