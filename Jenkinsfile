@@ -1,10 +1,7 @@
 pipeline {
     agent any
 
-    environment {
-        // Define environment variables here
-        // NODE_ENV = 'production' // Removed to allow installing devDependencies
-    }
+
 
     stages {
         stage('Checkout') {
