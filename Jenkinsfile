@@ -22,8 +22,10 @@ pipeline {
         stage('Test') {
             steps {
                 script {
-                    def packageJson = readJSON file: 'package.json'
-                    if (packageJson.scripts && packageJson.scripts.test) {
+                    // Check if test script exists using node
+                    def hasTestScript = sh(script: "node -e \"if (require('./package.json').scripts.test) process.exit(0); else process.exit(1);\"", returnStatus: true) == 0
+                    
+                    if (hasTestScript) {
                         try {
                             sh 'npm test'
                         } catch (Exception e) {
@@ -41,8 +43,10 @@ pipeline {
             steps {
                 // Run build if it exists
                 script {
-                    def packageJson = readJSON file: 'package.json'
-                    if (packageJson.scripts.build) {
+                    // Check if build script exists using node
+                    def hasBuildScript = sh(script: "node -e \"if (require('./package.json').scripts.build) process.exit(0); else process.exit(1);\"", returnStatus: true) == 0
+                    
+                    if (hasBuildScript) {
                         sh 'npm run build'
                     }
                 }
