@@ -4,19 +4,19 @@ const nextConfig = {
   async headers() {
     return [
       {
-        source: '/(.*)',
+        source: "/(.*)",
         headers: [
           {
-            key: 'Access-Control-Allow-Origin',
-            value: '*',
+            key: "Access-Control-Allow-Origin",
+            value: "*",
           },
         ],
       },
-    ]
+    ];
   },
   // Configure allowed dev origins to suppress the warning
   experimental: {
-    allowedDevOrigins: ['192.168.3.144']
+    allowedDevOrigins: ["192.168.3.144"],
   },
   eslint: {
     ignoreDuringBuilds: true,
@@ -27,6 +27,7 @@ const nextConfig = {
   images: {
     unoptimized: true,
   },
-}
+  output: "standalone",
+};
 
-export default nextConfig
+export default nextConfig;
