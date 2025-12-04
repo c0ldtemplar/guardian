@@ -1,76 +1,106 @@
 pipeline {
     agent any
-
-
-
+    
+    environment {
+        // --- CONFIGURACIÓN ESPECÍFICA PARA GUARDIAN ---
+        PROJECT_ROOT = '/var/www/guardian'
+        INFRA_ROOT = '/var/www/infrastructure'
+        APP_PORT = '3015' 
+        SERVICE_NAME = 'guardian-app'
+    }
+    
+    options {
+        buildDiscarder(logRotator(numToKeepStr: '5'))
+        timestamps()
+        timeout(time: 20, unit: 'MINUTES')
+        disableConcurrentBuilds()
+    }
+    
     stages {
+        stage('Clean Workspace') {
+            steps {
+                cleanWs()
+            }
+        }
+
         stage('Checkout') {
             steps {
                 checkout scm
+                script {
+                    env.GIT_COMMIT_SHORT = sh(script: "git rev-parse --short HEAD", returnStdout: true).trim()
+                }
+                echo "🚀 Iniciando despliegue de Guardian (Commit: ${env.GIT_COMMIT_SHORT})"
             }
         }
-
-        stage('Install Dependencies') {
-            steps {
-                sh 'npm install --legacy-peer-deps'
-            }
-        }
-
-        stage('Test') {
+        
+        stage('Update Source Code') {
             steps {
                 script {
-                    // Check if test script exists using node
-                    def hasTestScript = sh(script: "node -e \"if (require('./package.json').scripts.test) process.exit(0); else process.exit(1);\"", returnStatus: true) == 0
-                    
-                    if (hasTestScript) {
-                        try {
-                            sh 'npm test'
-                        } catch (Exception e) {
-                            echo 'Tests failed'
-                            currentBuild.result = 'UNSTABLE'
-                        }
-                    } else {
-                        echo 'No test script found in package.json'
-                    }
+                    echo "🔄 Sincronizando código fuente con ${PROJECT_ROOT}..."
+                    sh """
+                        rsync -rlv --checksum --no-perms --no-owner --no-group \\
+                        --exclude='.git' \\
+                        --exclude='node_modules' \\
+                        --exclude='.next' \\
+                        --exclude='.env*' \\
+                        --exclude='test-results' \\
+                        ./ ${PROJECT_ROOT}/
+                    """
                 }
             }
         }
 
-        stage('Build') {
+        stage('Approval for Production') {
+            when {
+                branch 'main'
+            }
             steps {
-                // Run build if it exists
+                timeout(time: 1, unit: 'HOURS') {
+                    input message: "Desplegar Guardian a Producción?", ok: '🚀 Deploy'
+                }
+            }
+        }
+        
+        stage('Deploy to Production') {
+            when {
+                branch 'main'
+            }
+            steps {
                 script {
-                    // Check if build script exists using node
-                    def hasBuildScript = sh(script: "node -e \"if (require('./package.json').scripts.build) process.exit(0); else process.exit(1);\"", returnStatus: true) == 0
-                    
-                    if (hasBuildScript) {
-                        sh 'npm run build'
+                    echo "🐳 Reconstruyendo contenedor ${SERVICE_NAME}..."
+                    dir(INFRA_ROOT) {
+                        sh """
+                            docker compose -f docker-compose.ecosystem.yml up -d --no-deps --build --force-recreate ${SERVICE_NAME}
+                            docker image prune -f
+                        """
                     }
                 }
             }
         }
-
-        stage('Deploy') {
+        
+        stage('Health Check') {
             steps {
+                echo "⏳ Esperando 20 segundos..."
+                sleep 20 
                 script {
-                    // Determine deployment strategy based on project type
-                    if (fileExists('docker-compose.yml')) {
-                        sh 'docker-compose up -d --build'
-                    } else if (fileExists('docker-compose.dev.yml')) {
-                        sh 'docker-compose -f docker-compose.dev.yml up -d --build'
-                    } else if (fileExists('ecosystem.config.js')) {
-                        sh 'pm2 reload ecosystem.config.js --env production'
+                    def status = sh(script: "curl -s -o /dev/null -w '%{http_code}' http://localhost:${APP_PORT} || echo '000'", returnStdout: true).trim()
+                    
+                    if (status == '200' || status == '307' || status == '308') {
+                        echo "✅ Guardian está VIVO en el puerto ${APP_PORT}."
                     } else {
-                        echo 'No deployment strategy found (no docker-compose.yml or ecosystem.config.js)'
+                        echo "⚠️ Alerta: Health Check devolvió ${status}. Revisa logs con 'docker logs ${SERVICE_NAME}'"
                     }
                 }
             }
         }
     }
-
+    
     post {
-        always {
-            cleanWs()
+        failure {
+            echo '❌ El despliegue de Guardian falló.'
+        }
+        success {
+            echo '✅ Despliegue de Guardian completado.'
         }
     }
 }
