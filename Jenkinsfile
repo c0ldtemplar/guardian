@@ -49,14 +49,6 @@ pipeline {
                 }
             }
         }
-
-        stage('Approval for Production') {
-            steps {
-                timeout(time: 1, unit: 'HOURS') {
-                    input message: "Desplegar Guardian a Producción?", ok: '🚀 Deploy'
-                }
-            }
-        }
         
         stage('Deploy to Production') {
             steps {
