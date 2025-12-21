@@ -28,6 +28,24 @@ pipeline {
                 echo "🚀 Iniciando despliegue de Guardian (Commit: ${env.IMAGE_TAG})"
             }
         }
+
+        stage('Install Dependencies') {
+            steps {
+                sh 'npm ci --legacy-peer-deps'
+            }
+        }
+
+        stage('Lint') {
+            steps {
+                script {
+                    try {
+                        sh 'npm run lint'
+                    } catch (Exception e) {
+                        echo "⚠️ Linting warnings ignored for now."
+                    }
+                }
+            }
+        }
         
         stage('Build Image') {
             steps {
