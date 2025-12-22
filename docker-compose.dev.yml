@@ -1,0 +1,7 @@
+version: "3.8"
+
+services:
+  # This project relies on shared services or external APIs (Supabase/Shared DB).
+  # No local docker containers are required for development.
+  # Run 'npm run dev' to start the application.
+  {}
