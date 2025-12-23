@@ -1,20 +1,22 @@
 services:
-  guardian-app:
-    build: .
+  web:
+    image: coldtemplar478/guardian-app:${IMAGE_TAG:-latest}
     container_name: guardian-app
+    build:
+      context: .
+      dockerfile: Dockerfile
     restart: unless-stopped
+    expose:
+      - "3000"
+    environment:
+      - NODE_ENV=production
     deploy:
       resources:
         limits:
-          cpus: "0.50"
           memory: 256M
-    ports:
-      - "3015:3000"
-    environment:
-      - NODE_ENV=production
     networks:
-      - tea-network
+      - rocalian-net
 
 networks:
-  tea-network:
+  rocalian-net:
     external: true
